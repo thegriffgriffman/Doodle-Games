@@ -1,13 +1,12 @@
-# Specification: [Your App Idea Name]
+# Specification: [Doodle Games]
 
-App description: [Write a one or two sentences describing what your app does and who it’s for.]
+App description: [I want to make a video game website where people can click on the games I made and play them.]
 
 ## Style and Theme
 
-[Describe the look and feel of your app.] 
+[I want it to be kind of retro looking.] 
 
-Overall mood:
-Examples: fun and playful, calm and professional, bold and energetic, etc.
+Overall mood: Fun and Cool.
 
 Use the *style-guide.html* for details on styling -- fonts, colors, and layout.
 
@@ -15,13 +14,13 @@ Use the *style-guide.html* for details on styling -- fonts, colors, and layout.
 
 ### Story 1 (most important)
 
-[Write 1-2 sentences. Who is using the app, what do they want to do, and what do they see when it works? Write it like you are describing it to a friend.]
+[I want to make an app for people who like to play video games to click on this website, see a game I made, click on it, and be able to play it.]
 
 ---
 
 ## Requirements
 
-Write clear statements about what the app must do.
+The app must work, showcase all of the games I made, and make it avaliable for all types of users to play them, like mobile, pc, etc.
 
 ### Functional Requirements
 
