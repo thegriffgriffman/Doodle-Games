@@ -14,7 +14,7 @@ export default {
         <span class="badge text-bg-light border">{{ itemsStore.items.length }} shown</span>
       </div>
 
-      <p class="text-muted">Browse a simple dataset loaded from a CSV file.</p>
+      <p class="text-muted">Browse the current game collection loaded from the CSV data file and preview each title with its image, summary, and platform.</p>
 
       <div v-if="itemsStore.isLoading" class="alert alert-secondary" role="status">
         Loading items...
@@ -35,7 +35,9 @@ export default {
               v-if="item.imageUrl"
               :src="item.imageUrl"
               :alt="item.name"
-              class="card-img-top collection-card-image object-fit-cover" />
+              loading="lazy"
+              class="card-img-top collection-card-image object-fit-cover"
+              @error="(event) => event.target.src = 'https://picsum.photos/seed/placeholder/800/600'" />
             <div
               v-else
               class="collection-card-image d-flex align-items-center justify-content-center bg-light text-muted">
@@ -52,7 +54,7 @@ export default {
                 {{ item.description || 'No description available.' }}
               </p>
 
-              <p class="small mb-3"><strong>Location:</strong> {{ item.location || 'N/A' }}</p>
+              <p class="small mb-3"><strong>Platform:</strong> {{ item.location || 'Browser game' }}</p>
 
               <div class="d-grid">
                 <router-link :to="'/items/' + item.id" class="btn btn-outline-secondary btn-sm">

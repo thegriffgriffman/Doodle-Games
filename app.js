@@ -36,7 +36,7 @@ const app = Vue.createApp({
       error: '',
     });
 
-    fetch('items-template.csv')
+    fetch('items.csv')
       .then((response) => {
         if (!response.ok) {
           throw new Error('Could not load CSV data file.');
@@ -47,19 +47,31 @@ const app = Vue.createApp({
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
+          transformHeader: (header) => header.trim().toLowerCase().replace(/\s+/g, '_'),
           complete: ({ data, errors }) => {
             if (errors.length > 0) {
               itemsStore.error = 'There was a problem reading the CSV data.';
               itemsStore.items = [];
             } else {
-              itemsStore.items = data.map((row) => ({
-                id: String(row.id || '').trim(),
-                name: String(row.name || '').trim(),
-                description: String(row.description || '').trim(),
-                category: String(row.category || '').trim(),
-                imageUrl: String(row.image_url || '').trim(),
-                location: String(row.location || '').trim(),
-              }));
+              itemsStore.items = data
+                .filter((row) => row && Object.values(row).some((value) => String(value || '').trim()))
+                .map((row) => {
+                  const name = String(row.name || row.title || row.item_name || row.game || '').trim();
+                  const rawId = String(row.id || row.slug || row.item_id || row.game_id || name || '').trim();
+                  const id = rawId
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/(^-|-$)/g, '');
+
+                  return {
+                    id: id || 'item',
+                    name,
+                    description: String(row.description || row.summary || row.details || row.blurb || '').trim(),
+                    category: String(row.category || row.genre || row.type || row.tag || 'Featured').trim(),
+                    imageUrl: String(row.image_url || row.imageurl || row.image || row.thumbnail || row.cover || row.screenshot || '').trim(),
+                    location: String(row.location || row.where || row.platform || row.platforms || row.source || 'Browser game').trim(),
+                  };
+                });
               itemsStore.error = '';
             }
             itemsStore.isLoading = false;

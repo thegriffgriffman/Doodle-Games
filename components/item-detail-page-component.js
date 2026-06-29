@@ -34,7 +34,9 @@ export default {
           v-if="selectedItem.imageUrl"
           :src="selectedItem.imageUrl"
           :alt="selectedItem.name"
-          class="item-detail-image w-100 object-fit-cover" />
+          loading="lazy"
+          class="item-detail-image w-100 object-fit-cover"
+          @error="(event) => event.target.src = 'https://picsum.photos/seed/placeholder/800/600'" />
         <div
           v-else
           class="item-detail-image w-100 d-flex align-items-center justify-content-center bg-light text-muted">
@@ -48,7 +50,8 @@ export default {
           </div>
 
           <p class="lead mb-3">{{ selectedItem.description || 'No description available.' }}</p>
-          <p class="mb-0"><strong>Location:</strong> {{ selectedItem.location || 'N/A' }}</p>
+          <p class="mb-2"><strong>Category:</strong> {{ selectedItem.category || 'Featured' }}</p>
+          <p class="mb-0"><strong>Platform:</strong> {{ selectedItem.location || 'Browser game' }}</p>
           <p class="text-muted mt-2 mb-0"><strong>Item ID:</strong> {{ selectedItem.id }}</p>
         </div>
       </article>
