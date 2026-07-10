@@ -13,7 +13,7 @@ export default {
       selectedItem,
     };
   },
-  template: /* html */ `
+  template: `
     <section class="container py-4">
       <router-link to="/items" class="btn btn-link ps-0 mb-3">← Back to collection</router-link>
 

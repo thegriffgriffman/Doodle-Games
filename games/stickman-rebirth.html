@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stickman Rebirth</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+      font-family: Arial, sans-serif;
+    }
+
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    canvas {
+      border: 5px solid #ff0000;
+      background: #000000;
+      box-shadow: 0 10px 40px rgba(255,0,0,0.5);
+      display: block;
+      border-radius: 8px;
+    }
+
+    .controls {
+      color: white;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .title { font-size: 24px; color: #ff0000; font-weight: bold; margin-bottom: 10px; }
+    .stats { font-size: 16px; color: #ffff00; }
+
+    button {
+      background: #ff0000;
+      color: white;
+      border: none;
+      padding: 10px 30px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      background: #ff6666;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="title">⚡ STICKMAN REBIRTH ⚡</div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="controls">
+      <div class="stats">Score: <span id="score">0</span> | Boss HP: <span id="bossHp">0</span> | Your HP: <span id="playerHp">100</span></div>
+      <div>← → Move | SPACE Jump/Double Jump | X Attack</div>
+      <button onclick="location.href='../'">Back to Games</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const GROUND_Y = canvas.height - 100;
+
+    class Particle {
+      constructor(x, y, vx, vy, color, life = 30) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.life = life;
+        this.maxLife = life;
+        this.size = Math.random() * 4 + 2;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.2;
+        this.life--;
+        this.size *= 0.98;
+      }
+
+      draw() {
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = this.life / this.maxLife;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    class Player {
+      constructor() {
+        this.x = 150;
+        this.y = GROUND_Y;
+        this.vx = 0;
+        this.vy = 0;
+        this.width = 15;
+        this.height = 40;
+        this.isJumping = false;
+        this.canDoubleJump = false;
+        this.health = 100;
+        this.maxHealth = 100;
+        this.attacking = false;
+        this.attackCooldown = 0;
+        this.damageFlash = 0;
+      }
+
+      update() {
+        this.vy += 0.5;
+        this.y += this.vy;
+        this.x += this.vx;
+        this.vx *= 0.95;
+
+        if (this.y >= GROUND_Y) {
+          this.y = GROUND_Y;
+          this.vy = 0;
+          this.isJumping = false;
+          this.canDoubleJump = true;
+        }
+
+        this.x = Math.max(20, Math.min(canvas.width - 20, this.x));
+
+        if (this.attacking) this.attacking = false;
+        if (this.attackCooldown > 0) this.attackCooldown--;
+        if (this.damageFlash > 0) this.damageFlash--;
+      }
+
+      draw() {
+        if (this.damageFlash % 4 > 1) return;
+
+        // Head
+        ctx.fillStyle = '#0099ff';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y - 30, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x - 3, this.y - 31, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.x + 3, this.y - 31, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x - 3, this.y - 31, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.x + 3, this.y - 31, 1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body
+        ctx.strokeStyle = '#0099ff';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y - 20);
+        ctx.lineTo(this.x, this.y);
+        ctx.stroke();
+
+        // Attack effect
+        if (this.attacking) {
+          ctx.strokeStyle = 'rgba(255,200,0,0.8)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y - 10, 35, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Arms
+        let armAngle = -0.3;
+        if (this.attacking) armAngle = -Math.PI * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y - 15);
+        ctx.lineTo(this.x + Math.cos(armAngle) * 18, this.y - 15 + Math.sin(armAngle) * 18);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y - 15);
+        ctx.lineTo(this.x - 15, this.y - 10);
+        ctx.stroke();
+
+        // Legs
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x - 6, this.y + 15);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + 6, this.y + 15);
+        ctx.stroke();
+
+        // Health bar
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(this.x - 25, this.y - 45, 50, 4);
+        ctx.fillStyle = this.health > 50 ? '#00ff00' : this.health > 25 ? '#ffff00' : '#ff0000';
+        ctx.fillRect(this.x - 25, this.y - 45, (50 * this.health) / this.maxHealth, 4);
+      }
+
+      move(direction) {
+        this.vx = direction * 5;
+      }
+
+      jump() {
+        if (!this.isJumping) {
+          this.vy = -12;
+          this.isJumping = true;
+          this.canDoubleJump = true;
+        } else if (this.canDoubleJump) {
+          this.vy = -12;
+          this.canDoubleJump = false;
+          for (let i = 0; i < 10; i++) {
+            particles.push(new Particle(
+              this.x + (Math.random() - 0.5) * 10,
+              this.y,
+              (Math.random() - 0.5) * 4,
+              Math.random() * 2 + 1,
+              '#0099ff'
+            ));
+          }
+        }
+      }
+
+      attack() {
+        if (this.attackCooldown === 0) {
+          this.attacking = true;
+          this.attackCooldown = 15;
+          for (let i = 0; i < 15; i++) {
+            particles.push(new Particle(
+              this.x + (Math.random() - 0.5) * 30,
+              this.y - 10 + (Math.random() - 0.5) * 20,
+              (Math.random() - 0.5) * 6,
+              (Math.random() - 0.5) * 6,
+              '#ffff00'
+            ));
+          }
+          return true;
+        }
+        return false;
+      }
+
+      takeDamage(amount) {
+        this.health -= amount;
+        this.damageFlash = 8;
+        for (let i = 0; i < 20; i++) {
+          particles.push(new Particle(
+            this.x + (Math.random() - 0.5) * 20,
+            this.y + (Math.random() - 0.5) * 20,
+            (Math.random() - 0.5) * 6,
+            Math.random() * 5 - 3,
+            '#ff0000'
+          ));
+        }
+      }
+    }
+
+    class Boss {
+      constructor(x, phase) {
+        this.x = x;
+        this.y = GROUND_Y - 20;
+        this.vx = 2;
+        this.phase = phase;
+        this.health = 100 + phase * 50;
+        this.maxHealth = this.health;
+        this.colors = ['#ff0000', '#ff6600', '#ff00ff'];
+        this.color = this.colors[phase];
+        this.attackCooldown = 0;
+        this.damageFlash = 0;
+        this.actionTimer = 0;
+        this.actionDuration = 60;
+      }
+
+      update(playerX) {
+        this.x += this.vx;
+        if (this.x < 100 || this.x > canvas.width - 100) {
+          this.vx *= -1;
+        }
+
+        this.actionTimer++;
+        if (this.actionTimer > this.actionDuration) {
+          this.vx = (Math.random() - 0.5) * 4;
+          this.actionTimer = 0;
+        }
+
+        if (this.attackCooldown > 0) this.attackCooldown--;
+        if (this.damageFlash > 0) this.damageFlash--;
+      }
+
+      draw() {
+        if (this.damageFlash % 4 > 1) return;
+
+        const headY = this.y - 40;
+
+        // Head
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, headY, 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, headY - 5, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.x + 5, headY - 5, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.arc(this.x - 5, headY - 5, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.x + 5, headY - 5, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Evil mouth
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x - 5, headY + 3);
+        ctx.lineTo(this.x + 5, headY + 3);
+        ctx.stroke();
+
+        // Body
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(this.x, headY + 15);
+        ctx.lineTo(this.x, headY + 40);
+        ctx.stroke();
+
+        // Large arms
+        const armLen = 25;
+        ctx.beginPath();
+        ctx.moveTo(this.x, headY + 15);
+        ctx.lineTo(this.x - armLen, headY + 10);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(this.x, headY + 15);
+        ctx.lineTo(this.x + armLen, headY + 10);
+        ctx.stroke();
+
+        // Legs
+        ctx.beginPath();
+        ctx.moveTo(this.x, headY + 40);
+        ctx.lineTo(this.x - 10, this.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(this.x, headY + 40);
+        ctx.lineTo(this.x + 10, this.y);
+        ctx.stroke();
+
+        // Health bar
+        const barWidth = 60;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(this.x - barWidth / 2, headY - 30, barWidth, 5);
+        ctx.fillStyle = '#ffff00';
+        ctx.fillRect(this.x - barWidth / 2, headY - 30, (barWidth * this.health) / this.maxHealth, 5);
+
+        // Phase label
+        ctx.fillStyle = '#ffff00';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Phase ' + (this.phase + 1), this.x, headY - 35);
+      }
+
+      takeDamage(amount) {
+        this.health -= amount;
+        this.damageFlash = 8;
+        for (let i = 0; i < 10; i++) {
+          particles.push(new Particle(
+            this.x + (Math.random() - 0.5) * 20,
+            this.y - 20 + (Math.random() - 0.5) * 20,
+            (Math.random() - 0.5) * 5,
+            (Math.random() - 0.5) * 5,
+            this.color
+          ));
+        }
+      }
+
+      isDead() {
+        return this.health <= 0;
+      }
+
+      getAttackRange() {
+        return 50 + this.phase * 10;
+      }
+    }
+
+    let player = new Player();
+    let boss = new Boss(canvas.width - 150, 0);
+    let particles = [];
+    let score = 0;
+    let gameActive = true;
+    let currentPhase = 0;
+
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === ' ') {
+        e.preventDefault();
+        player.jump();
+      }
+      if (e.key === 'x' || e.key === 'X') {
+        if (player.attack()) {
+          checkAttackCollision();
+        }
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    function checkAttackCollision() {
+      const dist = Math.hypot(player.x - boss.x, player.y - boss.y);
+      if (dist < boss.getAttackRange()) {
+        boss.takeDamage(35);
+        score += 10;
+      }
+    }
+
+    function update() {
+      if (!gameActive) return;
+
+      if (keys['arrowleft']) player.move(-1);
+      if (keys['arrowright']) player.move(1);
+
+      player.update();
+      boss.update(player.x);
+
+      particles.forEach(p => p.update());
+      particles = particles.filter(p => p.life > 0);
+
+      // Boss attacks player
+      if (Math.random() < 0.02 * (currentPhase + 1) && Math.hypot(player.x - boss.x, player.y - boss.y) < 150) {
+        player.takeDamage(5 + currentPhase * 3);
+        for (let i = 0; i < 8; i++) {
+          particles.push(new Particle(
+            boss.x + (Math.random() - 0.5) * 20,
+            boss.y - 20 + (Math.random() - 0.5) * 20,
+            (Math.random() - 0.5) * 5,
+            Math.random() * 3 - 3,
+            boss.color
+          ));
+        }
+      }
+
+      if (boss.isDead()) {
+        score += 500;
+        if (currentPhase < 2) {
+          currentPhase++;
+          boss = new Boss(canvas.width - 150, currentPhase);
+        } else {
+          gameActive = false;
+        }
+      }
+
+      if (player.health <= 0) {
+        gameActive = false;
+      }
+    }
+
+    function draw() {
+      // Dark background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Red glow from boss
+      const gradient = ctx.createRadialGradient(boss.x, boss.y - 30, 0, boss.x, boss.y - 30, 200);
+      gradient.addColorStop(0, 'rgba(255,0,0,0.1)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Ground
+      ctx.fillStyle = '#333333';
+      ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+      ctx.strokeStyle = '#666666';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(canvas.width, GROUND_Y);
+      ctx.stroke();
+
+      player.draw();
+      boss.draw();
+      particles.forEach(p => p.draw());
+
+      if (!gameActive) {
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = currentPhase >= 2 ? '#00ff00' : '#ff0000';
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(currentPhase >= 2 ? 'YOU WIN!' : 'GAME OVER', canvas.width / 2, canvas.height / 2 - 30);
+        ctx.font = '24px Arial';
+        ctx.fillStyle = '#ffff00';
+        ctx.fillText('Final Score: ' + score, canvas.width / 2, canvas.height / 2 + 20);
+      }
+    }
+
+    function updateUI() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('bossHp').textContent = Math.max(0, Math.floor(boss.health));
+      document.getElementById('playerHp').textContent = Math.max(0, Math.floor(player.health));
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      updateUI();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>

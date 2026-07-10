@@ -7,7 +7,7 @@ export default {
       itemsStore,
     };
   },
-  template: /* html */ `
+  template: `
     <section class="container py-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h3 mb-0">Collection</h1>
@@ -57,7 +57,7 @@ export default {
               <p class="small mb-3"><strong>Platform:</strong> {{ item.location || 'Browser game' }}</p>
 
               <div class="d-grid">
-                <router-link :to="'/items/' + item.id" class="btn btn-outline-secondary btn-sm">
+                <router-link :to="`/items/${item.id}`" class="btn btn-outline-secondary btn-sm">
                   View details
                 </router-link>
               </div>
